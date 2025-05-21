@@ -11,8 +11,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -86,4 +89,35 @@ func Encrypt(raw []byte) (string, error) {
 	}
 
 	return encrypt(raw, salt, iterationCnt, digestLen), nil
+}
+
+// Check if scram is a scram-sha-256 of raw
+func Check(scram string, raw []byte) (bool, error) {
+	if scram == "" {
+		return false, errors.New("empty scram")
+	}
+
+	s, ok := strings.CutPrefix(scram, "SCRAM-SHA-256$")
+	if !ok {
+		return false, errors.New("no SCRAM-SHA-256 prefix")
+	}
+
+	s, _, ok = strings.Cut(s, "$")
+	if !ok {
+		return false, errors.New("missing $")
+	}
+
+	iterationStr, salt64, ok := strings.Cut(s, ":")
+	if !ok {
+		return false, errors.New("missing :")
+	}
+
+	iterations, err := strconv.Atoi(iterationStr)
+
+	salt, err := base64.StdEncoding.DecodeString(salt64)
+	if err != nil {
+		return false, fmt.Errorf("base64 salt: %w", err)
+	}
+
+	return encrypt(raw, salt, iterations, digestLen) == scram, nil
 }

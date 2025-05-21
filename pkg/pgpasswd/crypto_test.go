@@ -36,3 +36,17 @@ func BenchmarkEncrypt(b *testing.B) {
 		}
 	}
 }
+
+func TestCheck(t *testing.T) {
+	hash, err := Encrypt([]byte("test"))
+	if err != nil {
+		t.Fatalf("encrypt failed: %v", err)
+	}
+	match, err := Check(hash, []byte("test"))
+	if err != nil {
+		t.Fatalf("error checking password: %v", err)
+	}
+	if !match {
+		t.Error("password does not match hash")
+	}
+}
